@@ -186,25 +186,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Guardar cambios (PUT)
     async function saveCurrentPage() {
         els.saveStatus.textContent = "Guardando...";
+        
+        // 1. Buscamos la página en memoria
         const currentPage = pages.find(p => p.id === currentPageId);
         if (!currentPage) return;
-
-        // Actualizar estado local
+    
+        // 2. Actualizamos los datos EN MEMORIA (sin recargar nada)
         currentPage.title = els.pageTitle.innerText;
         currentPage.content = els.editor.innerHTML;
-
+    
         try {
-            // Enviar a la base de datos
+            // 3. Enviamos los datos a la Base de Datos en silencio
             await apiCall(`/pages?id=${currentPageId}`, 'PUT', { 
                 title: currentPage.title, 
                 content: currentPage.content 
             });
             
             els.saveStatus.textContent = "Guardado";
-            renderSidebarList(); // Actualizar título en la barra lateral
+            
+            // 4. ¡IMPORTANTE! Solo actualizamos la barra lateral (para que cambie el título ahí)
+            // NUNCA llames a loadPages() o renderUI() aquí, o el cursor saltará.
+            renderSidebarList(); 
+            
         } catch (err) {
             els.saveStatus.textContent = "Error al guardar";
-            console.error(err);
+            console.error("Error guardando:", err);
         }
     }
 
@@ -421,4 +427,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
+
 
