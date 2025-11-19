@@ -1,0 +1,76 @@
+/* RESET & BASE */
+:root {
+    --bg-primary: #191919;
+    --bg-secondary: #202020;
+    --bg-hover: #2f2f2f;
+    --text-primary: #d1d5db;
+    --selection-color: rgba(35, 131, 226, 0.28);
+}
+
+::selection { background: var(--selection-color); }
+
+/* SCROLLBARS ESTILO NOTION */
+.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 5px; border: 2px solid var(--bg-primary); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
+
+/* EDITOR DE BLOQUES */
+[contenteditable]:empty:before {
+    content: attr(placeholder);
+    color: #555;
+    pointer-events: none;
+}
+
+.block-wrapper {
+    position: relative;
+    margin-bottom: 2px;
+    border-radius: 3px;
+}
+
+.editable-block {
+    outline: none;
+    padding: 4px 0;
+    min-height: 1.5em;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.editable-block:empty::before {
+    content: 'Escribe algo o pulsa "/" para comandos...';
+    color: #444;
+}
+
+/* CONTROLES DE BLOQUE (Hover a la izquierda) */
+.block-controls {
+    position: absolute;
+    left: -40px;
+    top: 3px;
+    width: 36px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    user-select: none;
+}
+
+@media (max-width: 768px) {
+    .block-controls { display: none !important; } /* Ocultar en móvil */
+    .editable-block { padding-left: 0; }
+}
+
+/* DRAG & DROP VISUALS */
+.dragging { opacity: 0.4; background: #2a2a2a; border-radius: 4px; }
+.drop-indicator { position: relative; }
+.drop-indicator::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 2px; background: #3b82f6;
+    pointer-events: none;
+}
+
+/* ANIMACIONES DE SIDEBAR */
+#main-container { transition: grid-template-columns 0.3s ease; }
+#main-container.sidebar-collapsed { grid-template-columns: 0px 1fr; }
+#main-container.sidebar-collapsed #sidebar { transform: translateX(-100%); opacity: 0; }
+body.sidebar-open #sidebar { transform: translateX(0); }

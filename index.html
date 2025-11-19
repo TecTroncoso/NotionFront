@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clon de Notion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#191919] text-gray-300 font-sans antialiased overflow-hidden">
+
+    <!-- MODAL DE AUTENTICACIÓN -->
+    <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-[#202020] border border-[#333] p-8 rounded-xl shadow-2xl w-full max-w-md relative">
+            <div class="flex justify-center mb-6">
+                <div class="w-12 h-12 bg-white text-black rounded-md flex items-center justify-center text-2xl font-bold shadow-lg">N</div>
+            </div>
+
+            <h2 id="auth-title" class="text-2xl font-bold text-white text-center mb-2">Iniciar Sesión</h2>
+            <p class="text-gray-400 text-center text-sm mb-6">Tus notas sincronizadas en la nube</p>
+
+            <form id="auth-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">EMAIL</label>
+                    <input type="email" id="email-input" required class="w-full bg-[#262626] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder-gray-600" placeholder="tu@email.com">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">CONTRASEÑA</label>
+                    <input type="password" id="password-input" required class="w-full bg-[#262626] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder-gray-600" placeholder="••••••••">
+                </div>
+
+                <div id="auth-error" class="text-red-400 text-xs bg-red-900/20 p-2 rounded hidden border border-red-900/50"></div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded transition-all flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                    <span id="btn-text">Entrar</span>
+                    <svg id="loading-spinner" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </button>
+            </form>
+
+            <div class="mt-6 text-center text-sm text-gray-400">
+                <span id="auth-toggle-text">¿No tienes cuenta?</span>
+                <button id="auth-toggle-btn" class="text-blue-400 hover:text-blue-300 hover:underline ml-1 transition-colors">Regístrate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <main id="main-container" class="grid grid-cols-1 md:grid-cols-[240px_1fr] h-screen transition-all duration-300">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed top-0 left-0 h-full w-[250px] z-40 bg-[#202020] p-2 flex flex-col select-none transform -translate-x-full transition-transform duration-300 ease-in-out border-r border-[#2f2f2f] md:relative md:w-auto md:h-auto md:translate-x-0 md:border-r-0">
+            <div class="flex flex-col h-full">
+                
+                <header class="px-2 py-3 mb-2 hover:bg-[#2f2f2f] rounded transition-colors cursor-pointer group">
+                    <div class="flex items-center gap-2 w-full text-sm">
+                        <div class="w-5 h-5 bg-gradient-to-tr from-pink-700 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0">N</div>
+                        <span id="user-email-display" class="truncate font-medium text-gray-200">Cargando...</span>
+                        
+                        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <button id="logout-btn" title="Cerrar Sesión" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                            </button>
+                            <button id="sidebar-collapse-button" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+                
+                <nav class="flex flex-col gap-0.5 text-sm text-gray-400">
+                    <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Buscar</div>
+                    <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Recientes</div>
+                </nav>
+                
+                <section class="mt-6 px-2 text-sm flex-grow overflow-y-auto custom-scrollbar">
+                    <div class="flex items-center justify-between group mb-1">
+                        <h3 class="text-xs text-gray-500 font-semibold pl-1">PRIVADO</h3>
+                        <button id="create-page-button" class="text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-[#333] rounded">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                    </div>
+                    <ul id="pages-list" class="flex flex-col gap-0.5 pb-4">
+                        <!-- Las páginas se renderizan aquí -->
+                    </ul>
+                </section>
+                
+                <div class="mt-auto border-t border-[#2f2f2f] pt-2">
+                     <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer text-sm text-gray-400"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Papelera</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <article class="w-full h-full flex flex-col bg-[#191919] relative">
+            <!-- Header Navbar -->
+            <header class="flex items-center justify-between px-3 py-2 h-[45px] text-sm select-none flex-shrink-0 sticky top-0 bg-[#191919] z-10">
+                <div class="flex items-center gap-2 min-w-0">
+                    <button id="hamburger-button" class="md:hidden p-1 hover:bg-[#2f2f2f] rounded"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg></button>
+                    <button id="sidebar-expand-button" class="hidden p-1 hover:bg-[#2f2f2f] rounded text-gray-400"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+                    <div class="flex items-center gap-1 truncate text-gray-400">
+                        <span class="text-lg">📄</span>
+                        <span id="breadcrumb-title" class="truncate hover:underline cursor-pointer hover:text-gray-300 transition-colors">Selecciona una página</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 text-gray-400">
+                    <span class="text-xs hidden sm:inline text-gray-500" id="save-status">Guardado</span>
+                    <button class="p-1 hover:bg-[#2f2f2f] rounded hover:text-gray-200">•••</button>
+                </div>
+            </header>
+            
+            <!-- Editor Area -->
+            <div id="main-content-area" class="flex-grow flex flex-col overflow-y-auto custom-scrollbar cursor-text" onclick="document.getElementById('page-title').focus()">
+                <div class="w-full max-w-4xl px-8 md:px-24 pt-12 pb-32 mx-auto">
+                    <!-- Título de Página -->
+                    <div class="group mb-4 relative">
+                         <div class="absolute -left-16 top-1 opacity-0 group-hover:opacity-100 transition-opacity hidden xl:block text-gray-600 text-xs text-right w-12 pt-2">H1</div>
+                        <h1 id="page-title" contenteditable="true" class="text-4xl font-bold text-gray-100 outline-none empty:before:content-['Sin_título'] empty:before:text-gray-600 break-words" placeholder="Sin título"></h1>
+                    </div>
+                    
+                    <!-- Editor de Bloques -->
+                    <div id="page-content-editor" class="min-h-[200px] pb-20">
+                        <!-- El contenido se inyecta aquí -->
+                    </div>
+                </div>
+            </div>
+        </article>
+        
+        <!-- Menú Contextual Flotante -->
+        <div id="page-options-menu" class="hidden fixed bg-[#252525] border border-[#333] shadow-2xl rounded-lg py-1 w-48 z-50 text-sm text-gray-300">
+            <button class="menu-item w-full text-left px-3 py-1.5 hover:bg-[#3068c0] hover:text-white flex items-center gap-2" data-action="delete">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Eliminar
+            </button>
+        </div>
+    </main>
+    
+    <script src="script.js"></script>
+</body>
+</html>
