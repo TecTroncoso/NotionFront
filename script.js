@@ -3,7 +3,7 @@
 // ============================================================
 // 1. Para desarrollo local usa: "http://localhost:3000/api"
 // 2. Para producción en Vercel usa: "https://tu-proyecto.vercel.app/api"
-const API_URL = "http://localhost:3000/api"; 
+const API_URL = "https://notion-back.vercel.app/api"; 
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -421,3 +421,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
+
