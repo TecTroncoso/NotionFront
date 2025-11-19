@@ -1,24 +1,27 @@
 // ============================================================
-// CONFIGURACIÓN - CAMBIA ESTO CUANDO TENGAS TU VERCEL
+// CONFIGURACIÓN
 // ============================================================
-// Por defecto para desarrollo local, usa localhost.
-// Para producción: "https://mi-proyecto.vercel.app/api"
-const API_URL = "https://notion-back.vercel.app/api"; 
+// 1. Para desarrollo local usa: "http://localhost:3000/api"
+// 2. Para producción en Vercel usa: "https://tu-proyecto.vercel.app/api"
+const API_URL = "http://localhost:3000/api"; 
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- ESTADO ---
+    // --- ESTADO GLOBAL ---
     let pages = [];
     let currentPageId = null;
+    // Guardamos el token en localStorage para mantener la sesión abierta
     let token = localStorage.getItem('notion_token');
     let userEmail = localStorage.getItem('notion_user_email');
+    
     let saveTimeout = null;
     let draggedBlock = null;
     let activeMenuPageId = null;
     let isLoginMode = true;
 
-    // --- ELEMENTOS DOM ---
+    // --- ELEMENTOS DEL DOM ---
     const els = {
+        // Auth
         modal: document.getElementById('auth-modal'),
         authForm: document.getElementById('auth-form'),
         emailInput: document.getElementById('email-input'),
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         authToggle: document.getElementById('auth-toggle-btn'),
         authToggleText: document.getElementById('auth-toggle-text'),
         
+        // App Principal
         mainContainer: document.getElementById('main-container'),
         sidebar: document.getElementById('sidebar'),
         pagesList: document.getElementById('pages-list'),
@@ -42,9 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
         menu: document.getElementById('page-options-menu')
     };
 
-    // --- API SERVICE ---
+    // --- SERVICIO DE API (Centraliza las peticiones) ---
     async function apiCall(endpoint, method = 'GET', body = null) {
         const headers = { 'Content-Type': 'application/json' };
+        
+        // Inyectar el token JWT si existe
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
         const config = { method, headers };
@@ -52,18 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const res = await fetch(`${API_URL}${endpoint}`, config);
+            
+            // Si el token expiró o no es válido, cerrar sesión
+            if (res.status === 401 || res.status === 403) {
+                logout();
+                throw new Error("Sesión expirada. Por favor inicia sesión de nuevo.");
+            }
+
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Error desconocido');
+            if (!res.ok) throw new Error(data.error || 'Error en la petición');
+            
             return data;
         } catch (error) {
-            if (error.message === "Token inválido" || error.message === "No autorizado") {
-                logout();
-            }
+            console.error(`API Error en ${endpoint}:`, error);
             throw error;
         }
     }
 
-    // --- AUTHENTICATION ---
+    // --- AUTENTICACIÓN (Login / Registro) ---
     function toggleAuthMode() {
         isLoginMode = !isLoginMode;
         els.authTitle.textContent = isLoginMode ? "Iniciar Sesión" : "Crear Cuenta";
@@ -80,23 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const type = isLoginMode ? 'login' : 'register';
 
         setLoading(true);
+        els.authError.classList.add('hidden');
         
         try {
-            // En un entorno real descomenta la llamada a la API
-            // const res = await apiCall('/auth', 'POST', { type, email, password });
+            // Llamada real al backend
+            const res = await apiCall('/auth', 'POST', { type, email, password });
             
-            // --- SIMULACIÓN PARA QUE EL FRONTEND FUNCIONE SIN BACKEND AÚN ---
-            // BORRA ESTE BLOQUE 'MOCK' CUANDO TENGAS EL BACKEND
-            await new Promise(r => setTimeout(r, 1000)); // Fake delay
-            const res = { 
-                token: "fake-jwt-token-" + Date.now(), 
-                user: { email: email } 
-            };
-            console.warn("⚠️ MODO SIMULACIÓN: Conecta el backend para guardar datos reales.");
-            // ----------------------------------------------------------------
-
             token = res.token;
             userEmail = res.user.email;
+            
+            // Guardar sesión en navegador
             localStorage.setItem('notion_token', token);
             localStorage.setItem('notion_user_email', userEmail);
             
@@ -115,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userEmail = null;
         localStorage.removeItem('notion_token');
         localStorage.removeItem('notion_user_email');
-        location.reload();
+        location.reload(); // Recargar para mostrar login
     }
 
     function setLoading(state) {
@@ -130,28 +135,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- GESTIÓN DE PÁGINAS ---
+    // --- GESTIÓN DE PÁGINAS (CRUD con Base de Datos) ---
+
+    // 1. Cargar todas las páginas (GET)
     async function loadPages() {
         try {
-            // const data = await apiCall('/pages'); // Backend real
-            
-            // --- SIMULACIÓN LOCAL ---
-            const localData = localStorage.getItem('mock_pages');
-            const data = localData ? JSON.parse(localData) : [];
-            // -----------------------
-
+            const data = await apiCall('/pages'); 
             pages = data;
-            if (pages.length === 0) await createPage();
-            else {
-                // Recuperar última página visitada o la primera
-                currentPageId = pages[0].id;
+
+            if (pages.length === 0) {
+                // Si el usuario es nuevo y no tiene páginas, crear una vacía
+                await createPage();
+            } else {
+                // Seleccionar la última visitada o la primera
+                if (!currentPageId) currentPageId = pages[0].id;
                 renderUI();
             }
         } catch (err) {
-            console.error("Error cargando páginas", err);
+            console.error("Error cargando páginas:", err);
         }
     }
 
+    // 2. Crear nueva página (POST)
     async function createPage() {
         const emptyBlock = `<div class="block-wrapper group flex items-start gap-1 relative pl-2">
             <div class="block-controls opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-gray-500">
@@ -162,78 +167,80 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
 
         try {
-            // const res = await apiCall('/pages', 'POST', { title: '', icon: '📄', content: emptyBlock }); // Backend
-            
-            // --- SIMULACIÓN ---
-            const res = { id: Date.now() };
+            const res = await apiCall('/pages', 'POST', { 
+                title: '', 
+                icon: '📄', 
+                content: emptyBlock 
+            });
+
+            // Añadir a la lista local y seleccionar
             const newPage = { id: res.id, title: '', icon: '📄', content: emptyBlock };
             pages.unshift(newPage);
-            localStorage.setItem('mock_pages', JSON.stringify(pages));
-            // ------------------
-
             currentPageId = res.id;
             renderUI();
         } catch (err) {
-            console.error(err);
+            console.error("Error creando página:", err);
         }
     }
 
+    // 3. Guardar cambios (PUT)
     async function saveCurrentPage() {
         els.saveStatus.textContent = "Guardando...";
         const currentPage = pages.find(p => p.id === currentPageId);
         if (!currentPage) return;
 
+        // Actualizar estado local
         currentPage.title = els.pageTitle.innerText;
         currentPage.content = els.editor.innerHTML;
 
         try {
-            // await apiCall(`/pages?id=${currentPageId}`, 'PUT', { 
-            //     title: currentPage.title, 
-            //     content: currentPage.content 
-            // });
-            
-            // --- SIMULACIÓN ---
-            localStorage.setItem('mock_pages', JSON.stringify(pages));
-            // ------------------
+            // Enviar a la base de datos
+            await apiCall(`/pages?id=${currentPageId}`, 'PUT', { 
+                title: currentPage.title, 
+                content: currentPage.content 
+            });
             
             els.saveStatus.textContent = "Guardado";
-            renderSidebarList(); // Actualizar título en sidebar
+            renderSidebarList(); // Actualizar título en la barra lateral
         } catch (err) {
             els.saveStatus.textContent = "Error al guardar";
+            console.error(err);
         }
     }
 
+    // 4. Borrar página (DELETE)
     async function deletePage(id) {
         if(pages.length <= 1) return alert("No puedes borrar la última página");
         if(!confirm("¿Borrar página permanentemente?")) return;
 
         try {
-            // await apiCall(`/pages?id=${id}`, 'DELETE');
+            await apiCall(`/pages?id=${id}`, 'DELETE');
             
-            // --- SIMULACIÓN ---
+            // Actualizar UI
             pages = pages.filter(p => p.id !== id);
-            localStorage.setItem('mock_pages', JSON.stringify(pages));
-            // ------------------
-
             if(currentPageId === id) currentPageId = pages[0].id;
             renderUI();
-        } catch(err) { alert("Error borrando"); }
+        } catch(err) { 
+            alert("Error al borrar la página");
+        }
     }
 
+    // Debounce: Esperar a que el usuario deje de escribir para guardar
     const debounceSave = () => {
         clearTimeout(saveTimeout);
         els.saveStatus.textContent = "Cambios sin guardar...";
-        saveTimeout = setTimeout(saveCurrentPage, 1000);
+        saveTimeout = setTimeout(saveCurrentPage, 1000); // 1 segundo de espera
     };
 
-    // --- RENDER UI ---
+    // --- RENDERIZADO DE UI ---
     function renderUI() {
         const page = pages.find(p => p.id === currentPageId);
         if (!page) return;
 
-        // Evitar re-renderizar el editor si ya estamos en la página (para no perder foco)
-        if (els.pageTitle.dataset.id != page.id) {
-            els.pageTitle.innerText = page.title; // Usar innerText para contenteditable
+        // Solo actualizamos el contenido si hemos cambiado de página
+        // para no interrumpir al usuario si está escribiendo
+        if (Number(els.pageTitle.dataset.id) !== page.id) {
+            els.pageTitle.innerText = page.title; 
             els.pageTitle.dataset.id = page.id;
             els.editor.innerHTML = page.content;
             els.breadcrumb.textContent = page.title || "Sin título";
@@ -259,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!e.target.closest('.options-btn')) {
                     currentPageId = page.id;
                     renderUI();
-                    // En móvil cerrar sidebar
                     document.body.classList.remove('sidebar-open');
                 }
             };
@@ -268,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.userDisplay.textContent = userEmail || "Usuario";
     }
 
-    // --- EDITOR INTERACTIONS (Blocks) ---
+    // --- LÓGICA DEL EDITOR (Bloques) ---
     function createNewBlock() {
         return `<div class="block-wrapper group flex items-start gap-1 relative pl-2">
             <div class="block-controls opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-gray-500">
@@ -279,26 +285,40 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
     }
 
+    // Manejo de teclas en el editor
     els.editor.addEventListener('keydown', (e) => {
+        // ENTER: Crear nuevo bloque
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             const currentWrapper = window.getSelection().anchorNode.parentElement.closest('.block-wrapper');
             if (currentWrapper) {
                 currentWrapper.insertAdjacentHTML('afterend', createNewBlock());
                 const nextBlock = currentWrapper.nextElementSibling.querySelector('.editable-block');
-                nextBlock.focus();
+                if(nextBlock) nextBlock.focus();
                 debounceSave();
             }
         }
-        // Backspace para borrar bloque vacío
+        // BACKSPACE: Borrar bloque vacío
         if (e.key === 'Backspace') {
-            const currentBlock = window.getSelection().anchorNode.parentElement;
-            if (currentBlock.classList.contains('editable-block') && currentBlock.innerText === '' && els.editor.children.length > 1) {
+            const sel = window.getSelection();
+            const node = sel.anchorNode;
+            if(!node) return;
+            const el = node.nodeType === 1 ? node : node.parentElement;
+            
+            if (el.classList.contains('editable-block') && el.innerText.trim() === '' && els.editor.children.length > 1) {
                 e.preventDefault();
-                const wrapper = currentBlock.closest('.block-wrapper');
+                const wrapper = el.closest('.block-wrapper');
                 const prev = wrapper.previousElementSibling;
                 if (prev) {
-                    prev.querySelector('.editable-block').focus();
+                    const prevEdit = prev.querySelector('.editable-block');
+                    prevEdit.focus();
+                    // Mover cursor al final del texto anterior
+                    const range = document.createRange();
+                    range.selectNodeContents(prevEdit);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    
                     wrapper.remove();
                     debounceSave();
                 }
@@ -306,17 +326,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Detectar cambios para guardar
     els.editor.addEventListener('input', debounceSave);
     els.pageTitle.addEventListener('input', () => {
         els.breadcrumb.textContent = els.pageTitle.innerText || "Sin título";
         debounceSave();
     });
 
-    // --- DRAG & DROP ---
+    // --- DRAG & DROP (Arrastrar bloques) ---
     els.editor.addEventListener('dragstart', e => {
-        if(e.target.classList.contains('drag-btn')) {
+        if(e.target.closest('.drag-btn')) {
             draggedBlock = e.target.closest('.block-wrapper');
             e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '');
             setTimeout(() => draggedBlock.classList.add('dragging'), 0);
         }
     });
@@ -333,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('.block-wrapper');
         if(target && draggedBlock) {
             target.classList.remove('drop-indicator');
-            // Insertar antes o después según la posición del ratón podría mejorarse, aquí insertamos antes
             target.parentNode.insertBefore(draggedBlock, target);
             debounceSave();
         }
@@ -344,22 +365,26 @@ document.addEventListener('DOMContentLoaded', () => {
         draggedBlock = null;
     });
 
-    // --- SIDEBAR ACTIONS ---
-    document.getElementById('sidebar-collapse-button').onclick = () => {
+    // --- INTERFAZ (Sidebar y Menús) ---
+    const collapseBtn = document.getElementById('sidebar-collapse-button');
+    if(collapseBtn) collapseBtn.onclick = () => {
         els.mainContainer.classList.add('sidebar-collapsed');
         document.getElementById('sidebar-expand-button').classList.remove('hidden');
     };
-    document.getElementById('sidebar-expand-button').onclick = () => {
+    
+    const expandBtn = document.getElementById('sidebar-expand-button');
+    if(expandBtn) expandBtn.onclick = () => {
         els.mainContainer.classList.remove('sidebar-collapsed');
         document.getElementById('sidebar-expand-button').classList.add('hidden');
     };
-    document.getElementById('hamburger-button').onclick = () => {
-        document.body.classList.toggle('sidebar-open');
-    };
+
+    const hamBtn = document.getElementById('hamburger-button');
+    if(hamBtn) hamBtn.onclick = () => document.body.classList.toggle('sidebar-open');
+
     document.getElementById('create-page-button').onclick = createPage;
     document.getElementById('logout-btn').onclick = logout;
 
-    // --- MENU CONTEXTUAL ---
+    // Menú contextual (los 3 puntitos)
     document.addEventListener('click', e => {
         const btn = e.target.closest('.options-btn');
         if (btn) {
@@ -370,15 +395,16 @@ document.addEventListener('DOMContentLoaded', () => {
             els.menu.style.left = `${rect.left}px`;
             els.menu.classList.remove('hidden');
         } else {
-            els.menu.classList.add('hidden');
+            if(els.menu) els.menu.classList.add('hidden');
         }
     });
     
-    els.menu.querySelector('[data-action="delete"]').onclick = () => {
+    const delBtn = els.menu.querySelector('[data-action="delete"]');
+    if(delBtn) delBtn.onclick = () => {
         if(activeMenuPageId) deletePage(activeMenuPageId);
     };
 
-    // --- INIT ---
+    // --- INICIALIZACIÓN ---
     function initAppData() {
         loadPages();
     }
@@ -386,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     els.authForm.addEventListener('submit', handleAuth);
     els.authToggle.addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode(); });
 
+    // Si ya existe token, omitimos login
     if (token) {
         els.modal.classList.add('opacity-0', 'pointer-events-none');
         initAppData();
@@ -394,4 +421,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 });
-
