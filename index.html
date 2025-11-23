@@ -2,35 +2,36 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Clon de Notion minimalista con editor de bloques y slash commands">
     <title>Clon de Notion</title>
+    <!-- Tailwind CSS desde CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[#191919] text-gray-300 font-sans antialiased overflow-hidden">
 
     <!-- MODAL DE AUTENTICACIÓN -->
-    <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-[#202020] border border-[#333] p-8 rounded-xl shadow-2xl w-full max-w-md relative">
-            <div class="flex justify-center mb-6">
-                <div class="w-12 h-12 bg-white text-black rounded-md flex items-center justify-center text-2xl font-bold shadow-lg">N</div>
-            </div>
-
-            <h2 id="auth-title" class="text-2xl font-bold text-white text-center mb-2">Iniciar Sesión</h2>
-            <p class="text-gray-400 text-center text-sm mb-6">Tus notas sincronizadas en la nube</p>
+    <dialog id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm w-full h-full p-0 m-0 border-none transition-opacity duration-300">
+        <div class="bg-[#202020] border border-[#333] p-8 rounded-xl shadow-2xl w-full max-w-md relative mx-4">
+            <header class="flex flex-col items-center mb-6">
+                <div class="w-12 h-12 bg-white text-black rounded-md flex items-center justify-center text-2xl font-bold shadow-lg mb-4">N</div>
+                <h2 id="auth-title" class="text-2xl font-bold text-white text-center">Iniciar Sesión</h2>
+                <p class="text-gray-400 text-center text-sm mt-1">Tus notas sincronizadas en la nube</p>
+            </header>
 
             <form id="auth-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">EMAIL</label>
+                    <label for="email-input" class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">EMAIL</label>
                     <input type="email" id="email-input" required class="w-full bg-[#262626] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder-gray-600" placeholder="tu@email.com">
                 </div>
                 
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">CONTRASEÑA</label>
+                    <label for="password-input" class="block text-xs font-medium text-gray-500 mb-1 tracking-wide">CONTRASEÑA</label>
                     <input type="password" id="password-input" required class="w-full bg-[#262626] border border-[#333] rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors placeholder-gray-600" placeholder="••••••••">
                 </div>
 
-                <div id="auth-error" class="text-red-400 text-xs bg-red-900/20 p-2 rounded hidden border border-red-900/50"></div>
+                <div id="auth-error" role="alert" class="text-red-400 text-xs bg-red-900/20 p-2 rounded hidden border border-red-900/50"></div>
 
                 <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded transition-all flex justify-center items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.3)]">
                     <span id="btn-text">Entrar</span>
@@ -40,189 +41,199 @@
 
             <div class="mt-6 text-center text-sm text-gray-400">
                 <span id="auth-toggle-text">¿No tienes cuenta?</span>
-                <button id="auth-toggle-btn" class="text-blue-400 hover:text-blue-300 hover:underline ml-1 transition-colors">Regístrate</button>
+                <button type="button" id="auth-toggle-btn" class="text-blue-400 hover:text-blue-300 hover:underline ml-1 transition-colors">Regístrate</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
-    <!-- APP PRINCIPAL -->
-    <main id="main-container" class="grid grid-cols-1 md:grid-cols-[240px_1fr] h-screen transition-all duration-300">
+    <!-- LAYOUT PRINCIPAL -->
+    <div id="layout-wrapper" class="grid grid-cols-1 md:grid-cols-[240px_1fr] h-screen w-screen overflow-hidden transition-all duration-300 relative">
+
+        <!-- OVERLAY MÓVIL (Fondo oscuro cuando abres menú en móvil) -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden glass-effect"></div>
 
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="fixed top-0 left-0 h-full w-[250px] z-40 bg-[#202020] p-2 flex flex-col select-none transform -translate-x-full transition-transform duration-300 ease-in-out border-r border-[#2f2f2f] md:relative md:w-auto md:h-auto md:translate-x-0 md:border-r-0">
-            <div class="flex flex-col h-full">
-                
-                <header class="px-2 py-3 mb-2 hover:bg-[#2f2f2f] rounded transition-colors cursor-pointer group">
-                    <div class="flex items-center gap-2 w-full text-sm">
-                        <div class="w-5 h-5 bg-gradient-to-tr from-pink-700 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0">N</div>
-                        <span id="user-email-display" class="truncate font-medium text-gray-200">Cargando...</span>
-                        
-                        <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <button id="logout-btn" title="Cerrar Sesión" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                            </button>
-                            <button id="sidebar-collapse-button" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                        </div>
-                    </div>
-                </header>
-                
-                <nav class="flex flex-col gap-0.5 text-sm text-gray-400">
-                    <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Buscar</div>
-                    <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Recientes</div>
-                </nav>
-                
-                <section class="mt-6 px-2 text-sm flex-grow overflow-y-auto custom-scrollbar">
-                    <div class="flex items-center justify-between group mb-1">
-                        <h3 class="text-xs text-gray-500 font-semibold pl-1">PRIVADO</h3>
-                        <button id="create-page-button" class="text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-[#333] rounded">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-[260px] md:w-auto z-40 bg-[#202020] p-2 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out border-r border-[#2f2f2f] h-full shadow-2xl md:shadow-none md:relative">
+            
+            <!-- Sidebar Header -->
+            <header class="px-2 py-3 mb-2 hover:bg-[#2f2f2f] rounded transition-colors cursor-pointer group flex-shrink-0">
+                <div class="flex items-center gap-2 w-full text-sm">
+                    <div class="w-5 h-5 bg-gradient-to-tr from-pink-700 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0" aria-hidden="true">N</div>
+                    <span id="user-email-display" class="truncate font-medium text-gray-200">Cargando...</span>
+                    
+                    <div class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <button id="logout-btn" title="Cerrar Sesión" aria-label="Cerrar sesión" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </button>
+                        <button id="sidebar-collapse-button" title="Ocultar menú" aria-label="Ocultar menú lateral" class="p-1 text-gray-400 hover:text-white hover:bg-gray-600 rounded hidden md:block">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
                     </div>
-                    <ul id="pages-list" class="flex flex-col gap-0.5 pb-4">
-                        <!-- Las páginas se renderizan aquí -->
-                    </ul>
-                </section>
-                
-                <div class="mt-auto border-t border-[#2f2f2f] pt-2">
-                     <div class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded cursor-pointer text-sm text-gray-400"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Papelera</div>
                 </div>
+            </header>
+            
+            <!-- Navigation Links -->
+            <nav class="flex flex-col gap-0.5 text-sm text-gray-400 flex-shrink-0">
+                <button class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded w-full text-left"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Buscar</button>
+                <button class="px-2 py-1 flex items-center gap-2 hover:bg-[#2f2f2f] rounded w-full text-left"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Recientes</button>
+            </nav>
+            
+            <!-- Pages List Section -->
+            <section class="mt-6 px-2 text-sm flex-grow overflow-y-auto custom-scrollbar">
+                <div class="flex items-center justify-between group mb-1">
+                    <h3 class="text-xs text-gray-500 font-semibold pl-1">PRIVADO</h3>
+                    <button id="create-page-button" aria-label="Crear nueva página" class="text-gray-500 hover:text-gray-300 md:opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-[#333] rounded">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                </div>
+                <ul id="pages-list" class="flex flex-col gap-0.5 pb-4">
+                    <!-- Las páginas se renderizan aquí dinámicamente -->
+                </ul>
+            </section>
+            
+            <!-- Footer Sidebar -->
+            <div class="mt-auto border-t border-[#2f2f2f] pt-2 flex-shrink-0">
+                 <button class="px-2 py-1 w-full text-left flex items-center gap-2 hover:bg-[#2f2f2f] rounded text-sm text-gray-400"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Papelera</button>
             </div>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
-        <article class="w-full h-full flex flex-col bg-[#191919] relative">
-            <!-- Header Navbar -->
-            <header class="flex items-center justify-between px-3 py-2 h-[45px] text-sm select-none flex-shrink-0 sticky top-0 bg-[#191919] z-10">
-                <div class="flex items-center gap-2 min-w-0">
-                    <button id="hamburger-button" class="md:hidden p-1 hover:bg-[#2f2f2f] rounded"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg></button>
-                    <button id="sidebar-expand-button" class="hidden p-1 hover:bg-[#2f2f2f] rounded text-gray-400"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+        <main class="w-full h-full flex flex-col bg-[#191919] relative min-w-0">
+            <!-- Top Navbar -->
+            <header class="flex items-center justify-between px-3 py-2 h-[45px] text-sm select-none flex-shrink-0 sticky top-0 bg-[#191919] z-20 w-full">
+                <div class="flex items-center gap-2 min-w-0 overflow-hidden">
+                    <!-- Botón Hamburguesa (Solo Móvil) -->
+                    <button id="hamburger-button" aria-label="Abrir menú" class="md:hidden p-1 hover:bg-[#2f2f2f] rounded text-gray-300">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+                    </button>
+                    <!-- Botón Expandir Sidebar (Solo Desktop cuando colapsado) -->
+                    <button id="sidebar-expand-button" aria-label="Mostrar menú" class="hidden p-1 hover:bg-[#2f2f2f] rounded text-gray-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <!-- Breadcrumbs -->
                     <div class="flex items-center gap-1 truncate text-gray-400">
-                        <span class="text-lg">📄</span>
+                        <span class="text-lg" aria-hidden="true">📄</span>
                         <span id="breadcrumb-title" class="truncate hover:underline cursor-pointer hover:text-gray-300 transition-colors">Selecciona una página</span>
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-2 text-gray-400">
+                <div class="flex items-center gap-2 text-gray-400 flex-shrink-0">
                     <span class="text-xs hidden sm:inline text-gray-500" id="save-status">Guardado</span>
-                    <button class="p-1 hover:bg-[#2f2f2f] rounded hover:text-gray-200">•••</button>
+                    <button aria-label="Más opciones" class="p-1 hover:bg-[#2f2f2f] rounded hover:text-gray-200">•••</button>
                 </div>
             </header>
             
-            <!-- Editor Area -->
-            <div id="main-content-area" class="flex-grow flex flex-col overflow-y-auto custom-scrollbar cursor-text">
-                <div class="w-full max-w-4xl px-8 md:px-24 pt-12 pb-32 mx-auto">
+            <!-- Área del Editor -->
+            <article id="main-content-area" class="flex-grow flex flex-col overflow-y-auto custom-scrollbar cursor-text w-full">
+                <div class="w-full max-w-4xl px-4 md:px-24 pt-8 md:pt-12 pb-32 mx-auto">
                     <!-- Título de Página -->
                     <div class="group mb-4 relative">
                          <div class="absolute -left-16 top-1 opacity-0 group-hover:opacity-100 transition-opacity hidden xl:block text-gray-600 text-xs text-right w-12 pt-2">H1</div>
-                        <h1 id="page-title" contenteditable="true" class="text-4xl font-bold text-gray-100 outline-none empty:before:content-['Sin_título'] empty:before:text-gray-600 break-words" placeholder="Sin título"></h1>
+                        <h1 id="page-title" contenteditable="true" class="text-3xl md:text-4xl font-bold text-gray-100 outline-none empty:before:content-['Sin_título'] empty:before:text-gray-600 break-words" placeholder="Sin título"></h1>
                     </div>
                     
                     <!-- Editor de Bloques -->
-                    <div id="page-content-editor" class="min-h-[200px] pb-20">
-                        <!-- El contenido se inyecta aquí -->
+                    <div id="page-content-editor" class="min-h-[200px] pb-20 w-full">
+                        <!-- El contenido dinámico se inyecta aquí -->
                     </div>
                 </div>
-            </div>
-        </article>
+            </article>
+        </main>
+    </div>
         
-        <!-- Menú Contextual Flotante (3 puntitos de página) -->
-        <div id="page-options-menu" class="hidden fixed bg-[#252525] border border-[#333] shadow-2xl rounded-lg py-1 w-48 z-50 text-sm text-gray-300">
-            <button class="menu-item w-full text-left px-3 py-1.5 hover:bg-[#3068c0] hover:text-white flex items-center gap-2" data-action="delete">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                Eliminar
+    <!-- MENÚ CONTEXTUAL FLOTANTE (Opciones de página en sidebar) -->
+    <div id="page-options-menu" role="menu" class="hidden fixed bg-[#252525] border border-[#333] shadow-2xl rounded-lg py-1 w-48 z-50 text-sm text-gray-300">
+        <button role="menuitem" class="menu-item w-full text-left px-3 py-1.5 hover:bg-[#3068c0] hover:text-white flex items-center gap-2" data-action="delete">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            Eliminar
+        </button>
+    </div>
+
+    <!-- MENÚ DE COMANDOS ESTILO NOTION (SLASH MENU) -->
+    <div id="slash-menu" role="menu" class="hidden fixed z-50 bg-[#252525] border border-[#333] shadow-2xl rounded-lg w-[320px] max-w-[90vw] max-h-[400px] flex flex-col text-gray-300 overflow-hidden font-sans">
+        
+        <!-- Header con Input (Visual) -->
+        <div class="p-2 border-b border-[#2f2f2f]">
+            <input type="text" id="slash-filter-input" aria-label="Filtrar comandos" placeholder="Filtrar..." class="w-full bg-[#333] text-gray-200 text-sm px-2 py-1 rounded border-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500">
+        </div>
+
+        <!-- Lista Scrollable -->
+        <div id="slash-menu-items" class="overflow-y-auto custom-scrollbar flex-grow py-2">
+            
+            <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Sugerencias</div>
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm group" data-command="ai">
+                <div class="w-10 h-10 border border-[#444] bg-[#2a2a2a] rounded flex items-center justify-center text-lg shadow-sm">✨</div>
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200 truncate">Continuar con IA</div>
+                    <div class="text-xs text-gray-500 truncate">Autocompletar texto</div>
+                </div>
+                <span class="text-[10px] bg-blue-900 text-blue-200 px-1 rounded border border-blue-800 flex-shrink-0">Beta</span>
+            </button>
+
+            <div class="my-2 border-t border-[#2f2f2f]"></div>
+
+            <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Bloques básicos</div>
+
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="text">
+                <img src="https://www.notion.so/images/blocks/text.96608b9a.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Texto</div>
+                    <div class="text-xs text-gray-500 truncate">Empieza a escribir texto plano</div>
+                </div>
+            </button>
+
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h1">
+                <img src="https://www.notion.so/images/blocks/header.57a72b2d.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Encabezado 1</div>
+                    <div class="text-xs text-gray-500 truncate">Título grande</div>
+                </div>
+                <span class="text-xs text-gray-600 font-mono hidden sm:inline">#</span>
+            </button>
+
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h2">
+                <img src="https://www.notion.so/images/blocks/subheader.9aab4769.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Encabezado 2</div>
+                    <div class="text-xs text-gray-500 truncate">Título mediano</div>
+                </div>
+                <span class="text-xs text-gray-600 font-mono hidden sm:inline">##</span>
+            </button>
+
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h3">
+                <img src="https://www.notion.so/images/blocks/subsubheader.d0ed0bb3.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Encabezado 3</div>
+                    <div class="text-xs text-gray-500 truncate">Título pequeño</div>
+                </div>
+                <span class="text-xs text-gray-600 font-mono hidden sm:inline">###</span>
+            </button>
+
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="bullet">
+                <img src="https://www.notion.so/images/blocks/bulleted-list.040942fc.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Lista con viñetas</div>
+                    <div class="text-xs text-gray-500 truncate">Crear una lista simple</div>
+                </div>
+                <span class="text-xs text-gray-600 font-mono hidden sm:inline">-</span>
+            </button>
+            
+            <button role="menuitem" class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="number">
+                <img src="https://www.notion.so/images/blocks/numbered-list.0406dade.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="" aria-hidden="true">
+                <div class="flex-grow min-w-0">
+                    <div class="font-medium text-gray-200">Lista numerada</div>
+                    <div class="text-xs text-gray-500 truncate">Crear una lista ordenada</div>
+                </div>
+                <span class="text-xs text-gray-600 font-mono hidden sm:inline">1.</span>
             </button>
         </div>
 
-        <!-- MENÚ DE COMANDOS ESTILO NOTION (SLASH MENU) -->
-        <div id="slash-menu" class="hidden fixed z-50 bg-[#252525] border border-[#333] shadow-2xl rounded-lg w-[320px] max-h-[400px] flex flex-col text-gray-300 overflow-hidden font-sans">
-            
-            <!-- Header con Input (Visual) -->
-            <div class="p-2 border-b border-[#2f2f2f]">
-                <input type="text" id="slash-filter-input" placeholder="Filtrar..." class="w-full bg-[#333] text-gray-200 text-sm px-2 py-1 rounded border-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500">
-            </div>
-
-            <!-- Lista Scrollable -->
-            <div id="slash-menu-items" class="overflow-y-auto custom-scrollbar flex-grow py-2">
-                
-                <!-- Sección Sugerencias -->
-                <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Sugerencias</div>
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm group" data-command="ai">
-                    <div class="w-10 h-10 border border-[#444] bg-[#2a2a2a] rounded flex items-center justify-center text-lg shadow-sm">✨</div>
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Continuar con IA</div>
-                        <div class="text-xs text-gray-500 truncate">Autocompletar texto</div>
-                    </div>
-                    <span class="text-[10px] bg-blue-900 text-blue-200 px-1 rounded border border-blue-800">Beta</span>
-                </button>
-
-                <div class="my-2 border-t border-[#2f2f2f]"></div>
-
-                <!-- Sección Bloques Básicos -->
-                <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Bloques básicos</div>
-
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="text">
-                    <img src="https://www.notion.so/images/blocks/text.96608b9a.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="T">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Texto</div>
-                        <div class="text-xs text-gray-500">Empieza a escribir texto plano</div>
-                    </div>
-                </button>
-
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h1">
-                    <img src="https://www.notion.so/images/blocks/header.57a72b2d.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H1">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Encabezado 1</div>
-                        <div class="text-xs text-gray-500">Título grande</div>
-                    </div>
-                    <span class="text-xs text-gray-600 font-mono">#</span>
-                </button>
-
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h2">
-                    <img src="https://www.notion.so/images/blocks/subheader.9aab4769.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H2">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Encabezado 2</div>
-                        <div class="text-xs text-gray-500">Título mediano</div>
-                    </div>
-                    <span class="text-xs text-gray-600 font-mono">##</span>
-                </button>
-
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h3">
-                    <img src="https://www.notion.so/images/blocks/subsubheader.d0ed0bb3.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H3">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Encabezado 3</div>
-                        <div class="text-xs text-gray-500">Título pequeño</div>
-                    </div>
-                    <span class="text-xs text-gray-600 font-mono">###</span>
-                </button>
-
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="bullet">
-                    <img src="https://www.notion.so/images/blocks/bulleted-list.040942fc.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="Li">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Lista con viñetas</div>
-                        <div class="text-xs text-gray-500">Crear una lista simple</div>
-                    </div>
-                    <span class="text-xs text-gray-600 font-mono">-</span>
-                </button>
-                
-                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="number">
-                    <img src="https://www.notion.so/images/blocks/numbered-list.0406dade.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="1.">
-                    <div class="flex-grow">
-                        <div class="font-medium text-gray-200">Lista numerada</div>
-                        <div class="text-xs text-gray-500">Crear una lista ordenada</div>
-                    </div>
-                    <span class="text-xs text-gray-600 font-mono">1.</span>
-                </button>
-            </div>
-
-            <!-- Footer -->
-            <div class="p-2 border-t border-[#2f2f2f] bg-[#2a2a2a] text-xs text-gray-500 flex justify-between items-center">
-                <span>Escribe «/» en la página</span>
-                <span>esc</span>
-            </div>
+        <!-- Footer -->
+        <div class="p-2 border-t border-[#2f2f2f] bg-[#2a2a2a] text-xs text-gray-500 flex justify-between items-center">
+            <span>Usa flechas para navegar</span>
+            <span>esc</span>
         </div>
-    </main>
+    </div>
     
     <script src="script.js"></script>
 </body>
