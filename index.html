@@ -127,16 +127,103 @@
             </div>
         </article>
         
-        <!-- Menú Contextual Flotante -->
+        <!-- Menú Contextual Flotante (3 puntitos de página) -->
         <div id="page-options-menu" class="hidden fixed bg-[#252525] border border-[#333] shadow-2xl rounded-lg py-1 w-48 z-50 text-sm text-gray-300">
             <button class="menu-item w-full text-left px-3 py-1.5 hover:bg-[#3068c0] hover:text-white flex items-center gap-2" data-action="delete">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 Eliminar
             </button>
         </div>
+
+        <!-- MENÚ DE COMANDOS ESTILO NOTION (SLASH MENU) -->
+        <div id="slash-menu" class="hidden fixed z-50 bg-[#252525] border border-[#333] shadow-2xl rounded-lg w-[320px] max-h-[400px] flex flex-col text-gray-300 overflow-hidden font-sans">
+            
+            <!-- Header con Input (Visual) -->
+            <div class="p-2 border-b border-[#2f2f2f]">
+                <input type="text" id="slash-filter-input" placeholder="Filtrar..." class="w-full bg-[#333] text-gray-200 text-sm px-2 py-1 rounded border-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500">
+            </div>
+
+            <!-- Lista Scrollable -->
+            <div id="slash-menu-items" class="overflow-y-auto custom-scrollbar flex-grow py-2">
+                
+                <!-- Sección Sugerencias -->
+                <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Sugerencias</div>
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm group" data-command="ai">
+                    <div class="w-10 h-10 border border-[#444] bg-[#2a2a2a] rounded flex items-center justify-center text-lg shadow-sm">✨</div>
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Continuar con IA</div>
+                        <div class="text-xs text-gray-500 truncate">Autocompletar texto</div>
+                    </div>
+                    <span class="text-[10px] bg-blue-900 text-blue-200 px-1 rounded border border-blue-800">Beta</span>
+                </button>
+
+                <div class="my-2 border-t border-[#2f2f2f]"></div>
+
+                <!-- Sección Bloques Básicos -->
+                <div class="px-3 py-1 text-xs text-gray-500 font-semibold mb-1">Bloques básicos</div>
+
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="text">
+                    <img src="https://www.notion.so/images/blocks/text.96608b9a.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="T">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Texto</div>
+                        <div class="text-xs text-gray-500">Empieza a escribir texto plano</div>
+                    </div>
+                </button>
+
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h1">
+                    <img src="https://www.notion.so/images/blocks/header.57a72b2d.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H1">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Encabezado 1</div>
+                        <div class="text-xs text-gray-500">Título grande</div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">#</span>
+                </button>
+
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h2">
+                    <img src="https://www.notion.so/images/blocks/subheader.9aab4769.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H2">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Encabezado 2</div>
+                        <div class="text-xs text-gray-500">Título mediano</div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">##</span>
+                </button>
+
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="h3">
+                    <img src="https://www.notion.so/images/blocks/subsubheader.d0ed0bb3.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="H3">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Encabezado 3</div>
+                        <div class="text-xs text-gray-500">Título pequeño</div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">###</span>
+                </button>
+
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="bullet">
+                    <img src="https://www.notion.so/images/blocks/bulleted-list.040942fc.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="Li">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Lista con viñetas</div>
+                        <div class="text-xs text-gray-500">Crear una lista simple</div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">-</span>
+                </button>
+                
+                <button class="slash-item w-full text-left px-3 py-1.5 hover:bg-[#2f2f2f] flex items-center gap-3 transition-colors text-sm" data-command="number">
+                    <img src="https://www.notion.so/images/blocks/numbered-list.0406dade.png" class="w-10 h-10 rounded border border-[#444] bg-white opacity-80" alt="1.">
+                    <div class="flex-grow">
+                        <div class="font-medium text-gray-200">Lista numerada</div>
+                        <div class="text-xs text-gray-500">Crear una lista ordenada</div>
+                    </div>
+                    <span class="text-xs text-gray-600 font-mono">1.</span>
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-2 border-t border-[#2f2f2f] bg-[#2a2a2a] text-xs text-gray-500 flex justify-between items-center">
+                <span>Escribe «/» en la página</span>
+                <span>esc</span>
+            </div>
+        </div>
     </main>
     
     <script src="script.js"></script>
 </body>
-
 </html>
