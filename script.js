@@ -1,8 +1,7 @@
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
-// 1. Para desarrollo local usa: "http://localhost:3000/api"
-// 2. Para producción en Vercel usa: "https://tu-proyecto.vercel.app/api"
+// Ajusta esto cuando despliegues el back
 const API_URL = "https://notion-back.vercel.app/api"; 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
         authToggle: document.getElementById('auth-toggle-btn'),
         authToggleText: document.getElementById('auth-toggle-text'),
         
-        // App Principal
-        mainContainer: document.getElementById('main-container'),
+        // App Principal & Layout
+        wrapper: document.getElementById('layout-wrapper'),
         sidebar: document.getElementById('sidebar'),
+        mobileOverlay: document.getElementById('mobile-overlay'),
         pagesList: document.getElementById('pages-list'),
         pageTitle: document.getElementById('page-title'),
         editor: document.getElementById('page-content-editor'),
@@ -100,7 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
             userEmail = res.user.email;
             localStorage.setItem('notion_token', token);
             localStorage.setItem('notion_user_email', userEmail);
-            els.modal.classList.add('opacity-0', 'pointer-events-none');
+            els.modal.close(); // Usando metodo nativo de dialog
+            els.modal.style.display = 'none'; // Fallback visual
             initAppData();
         } catch (err) {
             els.authError.textContent = err.message;
@@ -146,8 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function createPage() {
         const emptyBlock = `<div class="block-wrapper group flex items-start gap-1 relative pl-2">
             <div class="block-controls opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-gray-500">
-                <button class="drag-btn p-0.5 hover:bg-gray-700 rounded cursor-grab" draggable="true">⋮⋮</button>
-                <button class="add-btn p-0.5 hover:bg-gray-700 rounded">+</button>
+                <button class="drag-btn p-0.5 hover:bg-gray-700 rounded cursor-grab" draggable="true" aria-label="Mover bloque">⋮⋮</button>
+                <button class="add-btn p-0.5 hover:bg-gray-700 rounded" aria-label="Añadir bloque">+</button>
             </div>
             <div class="editable-block flex-grow text-gray-300" contenteditable="true"></div>
         </div>`;
@@ -221,12 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="opacity-70">${page.icon}</span>
                     <span class="truncate">${page.title || "Sin título"}</span>
                 </div>
-                <button class="options-btn opacity-0 group-hover:opacity-100 hover:bg-gray-600 p-0.5 rounded text-gray-400" data-id="${page.id}">•••</button>
+                <button class="options-btn opacity-0 group-hover:opacity-100 hover:bg-gray-600 p-0.5 rounded text-gray-400" data-id="${page.id}" aria-label="Opciones de página">•••</button>
             `;
             li.onclick = (e) => {
                 if(!e.target.closest('.options-btn')) {
                     currentPageId = page.id;
                     renderUI();
+                    // Cerrar sidebar en móvil al seleccionar página
                     document.body.classList.remove('sidebar-open');
                 }
             };
@@ -235,16 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
         els.userDisplay.textContent = userEmail || "Usuario";
     }
 
-    // --- SLASH MENU LOGIC (MENÚ ESTILO NOTION) ---
+    // --- SLASH MENU LOGIC ---
     
-    // 1. Abrir menú posicionado bajo el bloque
     function openSlashMenu() {
         if (!currentBlockForSlash) return;
 
-        // Obtener coordenadas del BLOQUE completo
         const rect = currentBlockForSlash.getBoundingClientRect();
+        // Asegurar que no se salga de la pantalla por abajo
         const top = rect.bottom + window.scrollY + 5; 
-        const left = rect.left + window.scrollX;
+        const left = Math.max(10, rect.left + window.scrollX); // Mínimo 10px de margen izquierdo
 
         slashMenu.style.top = `${top}px`;
         slashMenu.style.left = `${left}px`;
@@ -256,14 +257,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSlashSelection();
     }
 
-    // 2. Cerrar menú
     function closeSlashMenu() {
         slashMenu.classList.add('hidden');
         slashMenuOpen = false;
-        // No limpiamos currentBlockForSlash aquí para poder usarlo al ejecutar comandos
     }
 
-    // 3. Filtrar opciones
     function filterMenu(query) {
         const items = slashMenu.querySelectorAll('.slash-item');
         let hasVisible = false;
@@ -287,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 4. Actualizar visualmente la selección
     function updateSlashSelection() {
         const items = slashMenu.querySelectorAll('.slash-item:not(.hidden)');
         items.forEach(item => item.classList.remove('selected'));
@@ -302,22 +299,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. Ejecutar transformación del bloque
     function executeSlashCommand(command) {
         if (!currentBlockForSlash) return;
 
-        // Limpiar texto (/comando) y resetear clases
         currentBlockForSlash.innerText = ""; 
         currentBlockForSlash.className = "editable-block flex-grow text-gray-300 outline-none";
 
         if (command === 'h1') {
-            currentBlockForSlash.classList.add('text-4xl', 'font-bold', 'mt-6', 'mb-2');
+            currentBlockForSlash.classList.add('text-3xl', 'md:text-4xl', 'font-bold', 'mt-6', 'mb-2');
             currentBlockForSlash.setAttribute('placeholder', 'Encabezado 1');
         } else if (command === 'h2') {
-            currentBlockForSlash.classList.add('text-2xl', 'font-semibold', 'mt-4', 'mb-2');
+            currentBlockForSlash.classList.add('text-xl', 'md:text-2xl', 'font-semibold', 'mt-4', 'mb-2');
             currentBlockForSlash.setAttribute('placeholder', 'Encabezado 2');
         } else if (command === 'h3') {
-            currentBlockForSlash.classList.add('text-xl', 'font-semibold', 'mt-2', 'mb-1');
+            currentBlockForSlash.classList.add('text-lg', 'md:text-xl', 'font-semibold', 'mt-2', 'mb-1');
             currentBlockForSlash.setAttribute('placeholder', 'Encabezado 3');
         } else if (command === 'bullet') {
             currentBlockForSlash.classList.add('list-item', 'ml-5', 'list-disc');
@@ -332,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LÓGICA DEL EDITOR Y EVENT LISTENERS ---
 
-    // Detectar "/" al escribir
     els.editor.addEventListener('keyup', (e) => {
         const sel = window.getSelection();
         if (!sel.rangeCount) return;
@@ -342,15 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!block) return;
 
-        // Si empieza por "/", activar lógica
         if (block.innerText.startsWith('/')) {
             currentBlockForSlash = block;
-            
-            if (!slashMenuOpen) {
-                openSlashMenu();
-            }
-
-            // Filtrar menú con lo que se escriba después de "/"
+            if (!slashMenuOpen) openSlashMenu();
             const query = block.innerText.substring(1); 
             slashFilterInput.value = query;
             filterMenu(query);
@@ -359,46 +347,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Navegación dentro del menú con teclado
     document.addEventListener('keydown', (e) => {
         if (slashMenuOpen) {
             const visibleItems = slashMenu.querySelectorAll('.slash-item:not(.hidden)');
             
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                slashMenuIndex++;
-                updateSlashSelection();
-                return;
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                slashMenuIndex--;
-                updateSlashSelection();
-                return;
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (visibleItems.length > 0 && visibleItems[slashMenuIndex]) {
-                    executeSlashCommand(visibleItems[slashMenuIndex].dataset.command);
-                }
-                return;
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                closeSlashMenu();
-                return;
-            }
+            if (e.key === 'ArrowDown') { e.preventDefault(); slashMenuIndex++; updateSlashSelection(); return; } 
+            else if (e.key === 'ArrowUp') { e.preventDefault(); slashMenuIndex--; updateSlashSelection(); return; } 
+            else if (e.key === 'Enter') { 
+                e.preventDefault(); 
+                if (visibleItems.length > 0 && visibleItems[slashMenuIndex]) executeSlashCommand(visibleItems[slashMenuIndex].dataset.command);
+                return; 
+            } 
+            else if (e.key === 'Escape') { e.preventDefault(); closeSlashMenu(); return; }
         }
 
-        // --- LÓGICA ESTÁNDAR DEL EDITOR (cuando menú cerrado) ---
         if (!e.target.closest('.editable-block')) return;
 
-        // ENTER: Crear nuevo bloque
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             const currentWrapper = e.target.closest('.block-wrapper');
             if (currentWrapper) {
                 const newBlockHTML = `<div class="block-wrapper group flex items-start gap-1 relative pl-2">
                     <div class="block-controls opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-gray-500">
-                        <button class="drag-btn p-0.5 hover:bg-gray-700 rounded cursor-grab" draggable="true">⋮⋮</button>
-                        <button class="add-btn p-0.5 hover:bg-gray-700 rounded">+</button>
+                        <button class="drag-btn p-0.5 hover:bg-gray-700 rounded cursor-grab" draggable="true" aria-label="Mover bloque">⋮⋮</button>
+                        <button class="add-btn p-0.5 hover:bg-gray-700 rounded" aria-label="Añadir bloque">+</button>
                     </div>
                     <div class="editable-block flex-grow text-gray-300" contenteditable="true"></div>
                 </div>`;
@@ -408,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 debounceSave();
             }
         }
-        // BACKSPACE: Borrar bloque vacío
         if (e.key === 'Backspace') {
             const el = e.target;
             if (el.innerText.trim() === '' && els.editor.children.length > 1) {
@@ -418,14 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (prev) {
                     const prevEdit = prev.querySelector('.editable-block');
                     prevEdit.focus();
-                    // Mover cursor al final del anterior
                     const range = document.createRange();
                     range.selectNodeContents(prevEdit);
                     range.collapse(false);
                     const sel = window.getSelection();
                     sel.removeAllRanges();
                     sel.addRange(range);
-                    
                     wrapper.remove();
                     debounceSave();
                 }
@@ -433,21 +402,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Clics para el Slash Menu
+    // Clics globales
     document.addEventListener('click', (e) => {
+        // Cerrar slash menu si clic fuera
         if (slashMenuOpen && !e.target.closest('#slash-menu') && !e.target.closest('.editable-block')) {
             closeSlashMenu();
         }
+        // Cerrar menu contextual
+        if (!e.target.closest('.options-btn') && !els.menu.classList.contains('hidden')) {
+            els.menu.classList.add('hidden');
+        }
     });
 
-    // Evento clic items del menú
     slashMenu.querySelectorAll('.slash-item').forEach(item => {
         item.addEventListener('click', () => {
             executeSlashCommand(item.dataset.command);
         });
     });
 
-    // Detectar cambios para autoguardado
     els.editor.addEventListener('input', debounceSave);
     els.pageTitle.addEventListener('input', () => {
         els.breadcrumb.textContent = els.pageTitle.innerText || "Sin título";
@@ -486,26 +458,33 @@ document.addEventListener('DOMContentLoaded', () => {
         draggedBlock = null;
     });
 
-    // --- INTERFAZ GENERAL ---
+    // --- UI HELPERS ---
     const collapseBtn = document.getElementById('sidebar-collapse-button');
     if(collapseBtn) collapseBtn.onclick = () => {
-        els.mainContainer.classList.add('sidebar-collapsed');
+        els.wrapper.classList.add('sidebar-collapsed');
         document.getElementById('sidebar-expand-button').classList.remove('hidden');
     };
     
     const expandBtn = document.getElementById('sidebar-expand-button');
     if(expandBtn) expandBtn.onclick = () => {
-        els.mainContainer.classList.remove('sidebar-collapsed');
+        els.wrapper.classList.remove('sidebar-collapsed');
         document.getElementById('sidebar-expand-button').classList.add('hidden');
     };
 
     const hamBtn = document.getElementById('hamburger-button');
-    if(hamBtn) hamBtn.onclick = () => document.body.classList.toggle('sidebar-open');
+    const overlay = document.getElementById('mobile-overlay');
+    
+    // Toggle menú móvil
+    const toggleMobileMenu = () => {
+        document.body.classList.toggle('sidebar-open');
+    };
+    
+    if(hamBtn) hamBtn.onclick = toggleMobileMenu;
+    if(overlay) overlay.onclick = toggleMobileMenu;
 
     document.getElementById('create-page-button').onclick = createPage;
     document.getElementById('logout-btn').onclick = logout;
 
-    // Menú de opciones de página
     document.addEventListener('click', e => {
         const btn = e.target.closest('.options-btn');
         if (btn) {
@@ -515,8 +494,6 @@ document.addEventListener('DOMContentLoaded', () => {
             els.menu.style.top = `${rect.bottom + 5}px`;
             els.menu.style.left = `${rect.left}px`;
             els.menu.classList.remove('hidden');
-        } else {
-            if(els.menu) els.menu.classList.add('hidden');
         }
     });
     
@@ -534,10 +511,12 @@ document.addEventListener('DOMContentLoaded', () => {
     els.authToggle.addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode(); });
 
     if (token) {
-        els.modal.classList.add('opacity-0', 'pointer-events-none');
+        if(els.modal.showModal) els.modal.close(); 
+        els.modal.style.display = 'none';
         initAppData();
     } else {
-        els.modal.classList.remove('opacity-0', 'pointer-events-none');
+        if(els.modal.showModal) els.modal.showModal();
+        els.modal.style.display = 'flex';
     }
 
 });
