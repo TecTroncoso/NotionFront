@@ -7,12 +7,16 @@
     --selection-color: rgba(35, 131, 226, 0.28);
 }
 
+body {
+    -webkit-tap-highlight-color: transparent; /* Mejora tactil en móvil */
+}
+
 ::selection { background: var(--selection-color); }
 
 /* SCROLLBARS ESTILO NOTION */
-.custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+.custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 5px; border: 2px solid var(--bg-primary); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 4px; border: 2px solid var(--bg-primary); }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4f4f4f; }
 
 /* EDITOR DE BLOQUES */
@@ -33,7 +37,7 @@
     padding: 4px 0;
     min-height: 1.5em;
     line-height: 1.5;
-    word-break: break-word;
+    word-break: break-word; /* Importante para responsividad */
 }
 
 .editable-block:empty::before {
@@ -44,13 +48,14 @@
 /* CONTROLES DE BLOQUE (Hover a la izquierda) */
 .block-controls {
     position: absolute;
-    left: -40px;
+    left: -32px; /* Ajustado */
     top: 3px;
-    width: 36px;
+    width: 28px;
     display: flex;
     justify-content: flex-end;
     gap: 2px;
     user-select: none;
+    z-index: 10;
 }
 
 @media (max-width: 768px) {
@@ -70,22 +75,21 @@
 }
 
 /* ANIMACIONES DE SIDEBAR */
-#main-container { transition: grid-template-columns 0.3s ease; }
-#main-container.sidebar-collapsed { grid-template-columns: 0px 1fr; }
-#main-container.sidebar-collapsed #sidebar { transform: translateX(-100%); opacity: 0; }
+#layout-wrapper { transition: grid-template-columns 0.3s ease; }
+#layout-wrapper.sidebar-collapsed { grid-template-columns: 0px 1fr; }
+#layout-wrapper.sidebar-collapsed #sidebar { transform: translateX(-100%); opacity: 0; width: 0; overflow: hidden; padding: 0;}
+
+/* Estado sidebar abierto en móvil */
 body.sidebar-open #sidebar { transform: translateX(0); }
+body.sidebar-open #mobile-overlay { display: block; }
 
 /* SLASH MENU STYLES */
-/* Item seleccionado en el menú (Estado activo por teclado) */
 .slash-item.selected {
-    background-color: #2383e2 !important; /* El azul oficial de Notion */
+    background-color: #2383e2 !important;
 }
-
-/* Cuando está seleccionado, el texto principal se vuelve blanco */
 .slash-item.selected .font-medium {
     color: white !important;
 }
-/* Y el texto secundario se aclara */
 .slash-item.selected .text-gray-500 {
     color: rgba(255, 255, 255, 0.7) !important;
 }
