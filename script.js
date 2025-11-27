@@ -1,7 +1,6 @@
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
-// Ajusta esto cuando despliegues el back
 const API_URL = "https://notion-back.vercel.app/api"; 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -39,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         authToggle: document.getElementById('auth-toggle-btn'),
         authToggleText: document.getElementById('auth-toggle-text'),
         
-        // App Principal & Layout
+        // App Principal
         wrapper: document.getElementById('layout-wrapper'),
         sidebar: document.getElementById('sidebar'),
         mobileOverlay: document.getElementById('mobile-overlay'),
@@ -100,8 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
             userEmail = res.user.email;
             localStorage.setItem('notion_token', token);
             localStorage.setItem('notion_user_email', userEmail);
-            els.modal.close(); // Usando metodo nativo de dialog
-            els.modal.style.display = 'none'; // Fallback visual
+            els.modal.close(); 
+            els.modal.style.display = 'none';
             initAppData();
         } catch (err) {
             els.authError.textContent = err.message;
@@ -228,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!e.target.closest('.options-btn')) {
                     currentPageId = page.id;
                     renderUI();
-                    // Cerrar sidebar en móvil al seleccionar página
                     document.body.classList.remove('sidebar-open');
                 }
             };
@@ -237,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.userDisplay.textContent = userEmail || "Usuario";
     }
 
-    // --- SLASH MENU LOGIC ---
+    // --- SLASH MENU LOGIC (IA de Notion) ---
     
     function openSlashMenu() {
         if (!currentBlockForSlash) return;
@@ -245,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rect = currentBlockForSlash.getBoundingClientRect();
         // Asegurar que no se salga de la pantalla por abajo
         const top = rect.bottom + window.scrollY + 5; 
-        const left = Math.max(10, rect.left + window.scrollX); // Mínimo 10px de margen izquierdo
+        const left = Math.max(10, rect.left + window.scrollX); 
 
         slashMenu.style.top = `${top}px`;
         slashMenu.style.left = `${left}px`;
@@ -299,27 +297,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // LÓGICA DE EJECUCIÓN (Comandos de IA)
     function executeSlashCommand(command) {
         if (!currentBlockForSlash) return;
 
+        // Limpiar el contenido del bloque
         currentBlockForSlash.innerText = ""; 
         currentBlockForSlash.className = "editable-block flex-grow text-gray-300 outline-none";
+        
+        let aiText = "";
 
-        if (command === 'h1') {
-            currentBlockForSlash.classList.add('text-3xl', 'md:text-4xl', 'font-bold', 'mt-6', 'mb-2');
-            currentBlockForSlash.setAttribute('placeholder', 'Encabezado 1');
-        } else if (command === 'h2') {
-            currentBlockForSlash.classList.add('text-xl', 'md:text-2xl', 'font-semibold', 'mt-4', 'mb-2');
-            currentBlockForSlash.setAttribute('placeholder', 'Encabezado 2');
-        } else if (command === 'h3') {
-            currentBlockForSlash.classList.add('text-lg', 'md:text-xl', 'font-semibold', 'mt-2', 'mb-1');
-            currentBlockForSlash.setAttribute('placeholder', 'Encabezado 3');
-        } else if (command === 'bullet') {
-            currentBlockForSlash.classList.add('list-item', 'ml-5', 'list-disc');
-        } else if (command === 'number') {
-            currentBlockForSlash.classList.add('list-item', 'ml-5', 'list-decimal');
+        // Simulación de respuesta de IA
+        if (command === 'ai-translate') {
+            aiText = "Traduciendo contenido... (Simulación)";
+            currentBlockForSlash.classList.add('text-green-400', 'italic');
+        } else if (command === 'ai-continue') {
+            aiText = "Aquí tienes más contenido generado por la IA para continuar tu idea...";
+            currentBlockForSlash.classList.add('text-purple-400');
+        } else if (command === 'ai-ask' || command === 'ai-ask-page') {
+            aiText = "¿En qué puedo ayudarte hoy?";
+            currentBlockForSlash.classList.add('text-blue-400', 'font-medium');
         }
         
+        currentBlockForSlash.innerText = aiText;
         currentBlockForSlash.focus();
         closeSlashMenu();
         debounceSave();
@@ -404,11 +404,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Clics globales
     document.addEventListener('click', (e) => {
-        // Cerrar slash menu si clic fuera
         if (slashMenuOpen && !e.target.closest('#slash-menu') && !e.target.closest('.editable-block')) {
             closeSlashMenu();
         }
-        // Cerrar menu contextual
         if (!e.target.closest('.options-btn') && !els.menu.classList.contains('hidden')) {
             els.menu.classList.add('hidden');
         }
@@ -474,7 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const hamBtn = document.getElementById('hamburger-button');
     const overlay = document.getElementById('mobile-overlay');
     
-    // Toggle menú móvil
     const toggleMobileMenu = () => {
         document.body.classList.toggle('sidebar-open');
     };
